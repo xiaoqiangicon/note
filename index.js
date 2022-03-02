@@ -182,3 +182,116 @@ MyPromise.prototype.then = function(onFulfilled, onRejected) {
 // 因为js是单线程，遇到异步的代码就会被挂起在需要执行的时候加入Task任务队列钟。执行栈为空，event loop就会从task队列钟拿出需要执行的代码；
 // 微任务：process.nextTick,promise, mutationobserver
 // 宏任务：script, setTimeout, I/O, UI rendering
+
+
+// 11.手写call,apply,bind
+Function.prototype.myCall = function(context) {
+	if (typeof this !== 'function') {
+		throw 'error'
+	}
+
+	context = context || window;
+	context.fn = this;
+	const args = [...arguments].slice(1);
+	const result = context.fn(...args);
+	delete context.fn;
+	return result;
+}
+
+Function.prototype.myApply = function(context) {
+	if (typeof this !== 'function') {
+		throw 'error'
+	}
+
+	context = context || window;
+	context.fn = this;
+	let result
+
+	// 处理参数和call有区别
+	if (arguments[1]) {
+		result = context.fn(...arguments[1])
+	} else {
+		result = context.fn();
+	}
+	delete context.fn;
+	return result;
+}
+
+Function.prototype.myBind = function(context) {
+	if (typeof this !== 'function') {
+		throw 'error'
+	}
+
+	const _this = this;
+	const args = [...arguments].slice(1);
+
+	// 返回一个函数f.bind(obj, 1)(2)
+	return function F() {
+		// 因为返回了一个函数,我们可以new F(),所以需要判断
+		if (this instanceof F) {
+			return new _this(...args, ...arguments)
+		}
+		return _this.apply(context, args.concat(...arguments))
+	}
+}
+
+
+// 12.new
+// 1.生成一个新对象；链接到原型；绑定this,返回新对象
+function myNew() {
+	let obj = {};
+	let Con = [].shift.call(arguments);	// 获取构造函数;
+	obj.__proto__ = Con.prototype;
+	let result = Con.apply(obj, arguments);
+	return result instanceof Object ? result : obj;
+}
+
+
+// 13.instanceof
+// 通过判断对象的原型链钟是不是能找到类型的protoType；
+function myInstanceof(left, right) {
+	let prototype = right.prototype;
+	left = left.__proto__;
+
+	while(true) {
+		if (left === null || left === undefined) return false;
+		if (prototype === left) return true;
+		left = left.__proto__;
+	}
+}
+
+
+// 14.vue2和vue3响应式原理
+function defineReactive(data, key, val) {
+	Object.defineProperty(data, key, {
+		enumerable: true,
+		configurable: true,
+		get() {
+			return val;
+		},
+		set(newVal) {
+			val = newVal;
+		}
+	})
+}
+
+function observe(data) {
+	Object.keys(data).forEach(key => {
+		defineReactive(data, key, data[key])
+	})
+}
+
+let p = new Proxy(data, {
+	get(target, key, receiver) {
+			// target 目标对象，这里即data
+			console.log('get value:', key)
+			return target[key]
+	},
+	set(target, key, value, receiver) {
+			// receiver 最初被调用的对象。通常是proxy本身，但handler的set方法也有可能在原型链上或以其他方式被间接地调用（因此不一定是proxy本身）。
+			// 比如，假设有一段代码执行 obj.name = "jen"，obj不是一个proxy且自身不含name属性，但它的原型链上有一个proxy，那么那个proxy的set拦截函数会被调用，此时obj会作为receiver参数传进来。
+			console.log('set value:', key, value)
+			target[key] = value
+			return true // 在严格模式下，若set方法返回false，则会抛出一个 TypeError 异常。
+	}
+})
