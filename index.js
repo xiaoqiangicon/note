@@ -109,3 +109,76 @@ var reduceArray = arr.reduce((acc, current) => {
 	acc.push(current * 2);
 	return acc;
 }, []);
+
+
+// 6.并行和并发：并发是宏观概念；并行是围观概念
+
+// 7.promise 三个状态 pending, resolve, rejected
+// 缺点：无法取消promise，错误需要回调函数捕获.promise构造函数是同步执行的，then方法是异步执行的.
+
+
+// 8 async和await
+// async就是将函数返回值使用Promise.resolve()包裹一下.await将异步代码改造成了同步代码；
+
+// 9.手写promise
+const PENDING = 'pengding';
+const RESOLVED = 'resolved';
+const REJECTED = 'rejected';
+
+function MyPromise (fn) {
+	const that = this;
+	that .state = PENDING;
+	that.value = null;
+	that.resolvedCallbacks = [];
+	that.rejectedCallbacks = [];
+
+	function resolve(value) {
+		if (that.state === PENDING) {
+			that.state = RESOLVED;
+			that.value = value;
+			that.resolvedCallbacks.map(cb => {
+				cb(that.value);
+			})
+		}
+	}
+
+	function reject(value) {
+		if (that.state === PENDING) {
+			that.state = REJECTED;
+			that.value = value;
+			that.rejectedCallbacks.map(cb => {
+				cb(that.value);
+			})
+		}
+	}
+
+	try {
+		fn(resolve, reject)
+	} catch(e) {
+		reject(e);
+	}
+}
+
+MyPromise.prototype.then = function(onFulfilled, onRejected) {
+	const that = this;
+	onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : v => v;
+	onRejected = typeof onRejected === 'function' ? onRejected : r => {throw r};
+
+	if (that.state === PENDING) {
+		that.resolvedCallbacks.push(onFulfilled);
+		that.rejectedCallbacks.push(onRejected);
+	}
+	if (that.state === RESOLVED) {
+		onFulfilled(that.value);
+	}
+	if (that.state === REJECTED) {
+		onRejected(that.value);
+	}
+}
+
+
+
+// 10. EventLoop
+// 因为js是单线程，遇到异步的代码就会被挂起在需要执行的时候加入Task任务队列钟。执行栈为空，event loop就会从task队列钟拿出需要执行的代码；
+// 微任务：process.nextTick,promise, mutationobserver
+// 宏任务：script, setTimeout, I/O, UI rendering
