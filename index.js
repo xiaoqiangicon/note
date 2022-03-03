@@ -263,14 +263,22 @@ function myInstanceof(left, right) {
 
 // 14.vue2和vue3响应式原理
 function defineReactive(data, key, val) {
+	// 递归子属性
+	observe(val);
+	let dp = new Dep();
 	Object.defineProperty(data, key, {
 		enumerable: true,
 		configurable: true,
 		get() {
+			// 将watch添加到订阅
+			if (Dep.target) {
+				dp.addSub(Dep.target);
+			}
 			return val;
 		},
 		set(newVal) {
 			val = newVal;
+			dp.notify();
 		}
 	})
 }
@@ -280,6 +288,46 @@ function observe(data) {
 		defineReactive(data, key, data[key])
 	})
 }
+
+// 解耦属性的依赖收集和派发更新操作
+class Dep {
+	constructor() {
+		this.subs = [];
+	}
+
+	// 添加依赖
+	addSub() {
+		this.subs.push(sub)
+	}
+
+	// 更新
+	notify() {
+		this.subs.forEach(sub => {
+			sub.update();
+		})
+	}
+}
+// 全局属性，通过该属性配置watcher
+Dep.target = null;
+
+class Watch {
+	constructor(obj, key, cb) {
+		// 将Dep.target指向自己，然后触发属性的getter添加监听,最后将Dep.target置空
+		Dep.target = this;
+		this.cb = cb;
+		this.obj = obj;
+		this.key = key;
+		this.value = obj[key];
+		Dep.target = null;
+	}
+	update() {
+		// 获得新值
+		this.value = this.obj[this.key];
+		// 调用update更新DOM
+		this.cb(this.value);
+	}
+}
+// 核心就是手动触发一次属性的getter来实现依赖收集
 
 let p = new Proxy(data, {
 	get(target, key, receiver) {
@@ -295,3 +343,174 @@ let p = new Proxy(data, {
 			return true // 在严格模式下，若set方法返回false，则会抛出一个 TypeError 异常。
 	}
 })
+
+
+// 15.子节点是动态生成，子节点需要注册事件的话应该注册到父节点上；
+// 节省内存，不需要给子节点注销事件。
+
+// 16.跨域  JSONP和cors 服务端设置Access-Control-AAllow-Origin就可以开启CORS。
+// document.domain.只适用于二级域名相同的情况。比如a.test.com和b.test.com  给页面添加document.domain = 'test.com';
+// postMessage 通常用于获取嵌入页面的第三方页面数据，一个页面发送消息，另一个页面判断来源并接收消息。
+
+
+
+// 17.储存  cookie,session,localstorage,sessionStorage,indexDB
+// cookie一般由服务器生成，可以设置过期时间，4k，每次都会携带在header中，对于请求性能影响。
+
+
+// 18.浏览器缓存。缓存位置和缓存策略。
+// 缓存位置：service worker  memory cache disk cache push cache 网络请求
+// 缓存策略：强缓存和协商缓存。通过HTTP Header实现。
+// 强缓存通过Expires和Cache-Contorl设置。
+// 协商缓存通过 Last-Modified和ETag实现。浏览器发起验证资源时，如果资源没变，那么服务端就会返回304状态码。
+
+// 19.浏览器渲染原理：插入几万个DOM怎么不卡顿，就是只渲染可视区域的内容，在用户滚动的时候实时替换渲染的内容。
+// 重绘：改变外观，不改变布局。  回流：布局或者几何属性需要改变。回流必定重绘，重绘不一定回流。
+// 如何加快渲染速度：1.从文件大小考虑，2.从script标签使用考虑；3.从css，html书写考虑 4.从需要下载的内容是否需要在首屏使用考虑
+
+
+// 20.前端安全。
+// xss攻击：攻击者将可执行的代码注入到网页中。通过转义字符规避，也可以通过白名单过滤的方法。
+// csp：本质上就是建立白名单，只需要配置规则。1.通过设置header的Content-Security-Policy  2.通过设置meta标签的<meta http-equiv="Content-Security-Policy">开启。
+
+// csrf攻击。跨站请求伪造。
+// 防范：1.get请求不对数据修改   2.不让第三方网站访问到用户COOKIE，3.阻止第三方网站请求接口  4.请求时附带验证信息，比如验证码或者Token。可以通过验证Referer判断是否时第三方网站发起的。
+
+// 点击劫持：攻击者将需要攻击的网站通过iframe嵌入页面，将iframe设置为透明，诱导用户点击。
+// 可以通过设置X-FRAME-OPTIONS响应头来设置。DENY,SAMEORIGIN,ALLOW-FROM
+// 通过js防御： self === top则代表内嵌入其他页面。
+
+
+// 21.前端优化
+// DNS预解析。<link rel="dns-prefetch" href="">
+// 节流：滚动发起请求事件，每隔一段时间发起一次。
+function throttle(func, wait=50) {
+	// 上一次执行该函数的时间
+	let lastTime = 0;
+	return function(...args) {
+		// 当前时间
+		let now = +new Date();
+		if (now - lastTime > wait) {
+			lastTime = now;
+			func.apply(this, args);
+		}
+	}
+}
+
+// 防抖：按钮点击触发网络请求，不希望每次点击都发起网络请求，当用户点击按钮一段时间后没有再次点击才去发起请求。短时间大量触发同一事件，只会执行一次。
+function debounce(func, wait=50) {
+	let timer = 0;
+
+	return function(...args) {
+		if (timer)	clearTimeout(timer);
+
+		timer = setTimeout(() => {
+			func.apply(this, args);
+		}, wait)
+	}
+}
+
+// 预加载 预渲染prerender   懒加载   懒执行   CDN  
+
+
+// 22.webpack性能优化
+// 减少打包时间：1.优化Loader,优化loader的文件搜索范围  2.HappyPack，webpack打包过程是单线程的，happypack可以将loader的同步执行转换为异步的。  3.DllPlugin可以将特定的类库提前打包然后引入，减少打包类库的次数，并且也实现了公共代码抽离成单独文件的优化方案。  4.代码压缩，一般使用UglifyJS压缩代码。webpack4中mode为production就默认压缩代码。 一些小的优化点：resolve.alias通过别名映射一个路径，更快找到路径。表明文件后缀列表，减少查找。
+
+// 减少打包的体积：1.按需加载。 2.scope hoisting 分析出模块的依赖关系，尽可能把打包的模块合并到一个函数中去。 3.tree shaking。生产环境自动开启。     
+
+
+// 23.事件代理
+function delegate(element, eventType, selector, fn) {
+	element.addEventListener(eventType, e => {
+		let el = e.target;
+
+		while(!el.matches(selector)) {
+			if (element === el) {
+				el = null;
+				break;
+			}
+			el = el.parentNode
+		}
+		el && fn.call(el, e, el);
+	})
+	return element;
+}
+
+// 24.数组去重
+(arr) => [...new Set(arr)];
+// filter采用indexOf返回最近的index；
+function unique(array) {
+	var res = array.filter(function(item, index, array) {
+		return array.indexOf(item) === index;
+	})
+	return res;
+}
+// reduce去重 includes判断有无当前元素；
+function unique(array) {
+	var res = array.reduce((pre, cur) => {
+		return pre.includes(cur) ? pre : [...pre, cur]
+	}, [])
+}
+
+
+// 25.函数柯里化:就是把接受多个参数的函数变换成接受单一参数的函数，并且返回接受余下参数返回结果的应用。
+// 思路：判断传递的参数是否达到执行函数的fn个数，没有达到的话继续返回新的函数，并且返回curry函数传递剩余参数。
+let myCurry = (fn, ...args) => {
+	console.log(args, ...arguments);
+	return fn.length > args.length ? (...arguments) => myCurry(fn, ...args, ...arguments) : fn(...args);
+}
+let add = (a,b,c) => a+b+c;
+let addSum = myCurry(add);
+
+// 26 数组展平
+function myFlat(arr, d=1) {
+	return arr.reduce((res, cur) => {
+		if (Array.isArray(cur)) {
+			return [...res, ...myFlat(cur)]
+		} else {
+			return [...res, cur]
+		}
+	}, []);
+}
+function flatDeep(arr, d = 1) {
+	return d > 0 ? arr.reduce((acc, val) => acc.concat(Array.isArray(val) ? flatDeep(val, d - 1) : val),
+	[]) :
+			arr.slice();
+};
+
+function flatDeep(arr, d = 1) {
+	return d > 0 ? arr.reduce((acc, val) => acc.concat(Array.isArray(val) ? flatDeep(val, d - 1) : val),
+	[]) :
+			arr.slice();
+};
+
+// 27实现sleep和reduce
+function sleep(fn, time) {
+	return new Promise((resolve, reject) => {
+		setTimeout(() => {
+			resolve(fn)
+		}, time);
+	})
+}
+function myReduce(fn, initVal) {
+	let result = initVal;
+	let i = 0;
+	if (typeof initVal === 'undefined') {
+		result = this[i]
+		i++;
+	}
+	while(i < this.length) {
+		result = fn(result, this[i])
+	}
+	return result;
+}
+
+
+// 28.前端路由 onhashchange和history.pushState,history.replaceState改变url；1.hash模式无需后端配置，history模式在用户手动输入地址或者刷新页面时候会发起url请求，后端需要配置Index.html页面用于匹配不到静态资源的时候。
+
+// 29.生命周期函数：beforeCreate created beforeMount(创建VDOM) mounted（渲染） beforeDestory destoryed   
+// keep-alive的生命周期有  actived(命中缓存时调用)  deactivated
+// NextTick:下次Dom更新循环结束之后执行延迟回调，用于获取更新后的DOM。
+
+// 30 UDP和TCP：UDP是无连接的，通信不需要建立连接，所以不可靠，不拆分不拼接。高效，一对一一对多多对多多对一都可。
+// 输入URL到页面渲染的整个流程  1.解析DNS   2.建立TCP连接   3.浏览器解析渲染页面
