@@ -1,3 +1,5 @@
+import { arguments } from "file-loader";
+
 // 1.对象的深拷贝
 function deepClone(obj) {
   function isObject(o) {
@@ -295,3 +297,91 @@ let p = new Proxy(data, {
 			return true // 在严格模式下，若set方法返回false，则会抛出一个 TypeError 异常。
 	}
 })
+
+
+
+// 23.事件代理
+function delegate(element, eventType, selector, fn) {
+	element.addEventListener(eventType, e => {
+		let el = e.target;
+
+		while(!el.matches(selector)) {
+			if (element === el) {
+				el = null;
+				break;
+			}
+			el = el.parentNode
+		}
+		el && fn.call(el, e, el);
+	})
+	return element;
+}
+
+// 24.数组去重
+(arr) => [...new Set(arr)];
+// filter采用indexOf返回最近的index；
+function unique(array) {
+	var res = array.filter(function(item, index, array) {
+		return array.indexOf(item) === index;
+	})
+	return res;
+}
+// reduce去重 includes判断有无当前元素；
+function unique(array) {
+	var res = array.reduce((pre, cur) => {
+		return pre.includes(cur) ? pre : [...pre, cur]
+	}, [])
+}
+
+
+// 25.函数柯里化:就是把接受多个参数的函数变换成接受单一参数的函数，并且返回接受余下参数返回结果的应用。
+// 思路：判断传递的参数是否达到执行函数的fn个数，没有达到的话继续返回新的函数，并且返回curry函数传递剩余参数。
+let myCurry = (fn, ...args) => {
+	console.log(args, ...arguments);
+	return fn.length > args.length ? (...arguments) => myCurry(fn, ...args, ...arguments) : fn(...args);
+}
+let add = (a,b,c) => a+b+c;
+let addSum = myCurry(add);
+
+// 26 数组展平
+function myFlat(arr, d=1) {
+	return arr.reduce((res, cur) => {
+		if (Array.isArray(cur)) {
+			return [...res, ...myFlat(cur)]
+		} else {
+			return [...res, cur]
+		}
+	}, []);
+}
+function flatDeep(arr, d = 1) {
+	return d > 0 ? arr.reduce((acc, val) => acc.concat(Array.isArray(val) ? flatDeep(val, d - 1) : val),
+	[]) :
+			arr.slice();
+};
+
+function flatDeep(arr, d = 1) {
+	return d > 0 ? arr.reduce((acc, val) => acc.concat(Array.isArray(val) ? flatDeep(val, d - 1) : val),
+	[]) :
+			arr.slice();
+};
+
+// 27实现sleep和reduce
+function sleep(fn, time) {
+	return new Promise((resolve, reject) => {
+		setTimeout(() => {
+			resolve(fn)
+		}, time);
+	})
+}
+function myReduce(fn, initVal) {
+	let result = initVal;
+	let i = 0;
+	if (typeof initVal === 'undefined') {
+		result = this[i]
+		i++;
+	}
+	while(i < this.length) {
+		result = fn(result, this[i])
+	}
+	return result;
+}
