@@ -1,0 +1,24 @@
+{
+  // "presets": [
+  //   [
+  //     "@babel/preset-env",
+  //     {
+  //       "useBuiltIns": "usage", // 按需引入
+  //       "corejs": 3
+  //     }
+  //   ]
+  // ],
+  //"plugins": [
+    // [
+    //   "babel-plugin-transform-runtime",
+    //   {
+    //     "helpers": false,
+    //     "polyfill": false,
+    //     "regenerator": true,
+    //     "moduleName": "babel-runtime"
+    //   }
+    // ]
+    // ["@babel/plugin-proposal-class-properties"]
+  //]
+  "plugins": [["@babel/plugin-proposal-class-properties"]]
+}
