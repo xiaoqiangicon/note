@@ -3,7 +3,6 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const config = {
   mode: 'development',
-  // devtool: 'cheap-module-eval-source-map',
   entry: {
     main: './src/index.js',
   },
@@ -25,11 +24,6 @@ const config = {
         ]
       }
     }]
-  },
-  resolve: {
-    alias: {
-      'vue$': 'vue/dist/vue.esm.js',
-    }
   },
   plugins: [
     // 用于生成index.html

@@ -24,6 +24,19 @@ function deepClone(obj) {
 	return newObj;
 }
 
+// 考虑MAP  SET  循环引用
+function cloneDeep(obj, map = new WeakMap()) {
+	// 避免循环引用
+	const objFromMap = map.get(obj);
+	if (objFromMap) return objFromMap;
+
+	let target = {};
+	map.set(obj, target);
+
+
+	return target
+}
+
 // 每个对象都有__proto__属性， 指向对象原型；
 // 每个constructor构造函数都有一个prototype属性；
 // 原型的constructor指向构造函数，构造函数的prototype指向原型
@@ -765,9 +778,115 @@ function EventBusFn1(a, b) { console.log('fn1', a, b) }
 function EventBusFn2(a, b) { console.log('fn2', a, b) }
 function EventBusFn3(a, b) { console.log('fn3', a, b) }
 const eventTest = new EventBus();
-eventTest.once('key1', EventBusFn1)
-eventTest.on('key1', EventBusFn2)
-eventTest.on('key1', EventBusFn3)
-eventTest.emit('key1', 1, 2)
-eventTest.off('key1', EventBusFn2)
-eventTest.emit('key1', 1, 2)
+// eventTest.once('key1', EventBusFn1)
+// eventTest.on('key1', EventBusFn2)
+// eventTest.on('key1', EventBusFn3)
+// eventTest.emit('key1', 1, 2)
+// eventTest.off('key1', EventBusFn2)
+// eventTest.emit('key1', 1, 2)
+
+
+
+// LRU缓存 如果内存优先，只缓存最近使用的，删除沉水数据。核心get set
+class LRUCache {
+	data = new Map();
+	constructor(length) {
+		if (length < 1) throw new Error('invalid length');
+		this.length = length;
+	}
+
+	set(key, value) {
+		const data = this.data;
+		if (data.has(key)) {
+			data.delete(key)
+		}
+		data.set(key, value);
+
+		if (data.size > this.length) {
+			const delKey = data.keys().next().value;
+			data.delete(delKey);
+		}
+	}
+
+	get(key) {
+		const data = this.data;
+		if (!data.has(key))	return null;
+
+		const value = data.get(key);
+		data.delete(key);
+		data.set(key, value);
+
+		return value;
+	}
+}
+
+
+
+// 双向链表
+
+
+
+// 将数组转成树
+let treeArr = [
+	{id: 1, name: 'A', parentId: 0},
+	{id: 2, name: 'B', parentId: 1},
+	{id: 3, name: 'C', parentId: 1},
+	{id: 4, name: 'D', parentId: 2},
+	{id: 5, name: 'E', parentId: 2},
+	{id: 6, name: 'F', parentId: 3},
+]
+function arrToTree(arr) {
+	const idToTreeNode = new Map();	// 用于id 和 treeNode的映射
+
+	let root = null;
+
+	arr.forEach(item => {
+		const { id, name, parentId } = item;
+
+		const treeNode = { id, name }
+		idToTreeNode.set(id, treeNode);
+
+		// 找到parentNode并加入到它的children；
+		const parentNode = idToTreeNode.get(parentId);
+		if (parentId) {
+			if (parentNode.children == null) parentNode.children = [];
+			parentNode.children.push(treeNode);
+		}
+
+		// 找到根节点
+		if (parentId === 0) root = treeNode;
+	})
+	return root;
+}
+// console.log(arrToTree(treeArr));
+
+
+
+// 不要去读代码，而是模拟执行代码（JS引擎）
+function Foo1() {
+	Foo1.a = function() { console.log(1) }
+	this.a = function() { console.log(2) }
+}
+
+Foo1.prototype.a = function() { console.log(3) }
+Foo1.a = function() { console.log(4) }
+
+// Foo1.a();	// 4
+let obj = new Foo1();	// Foo1.a覆盖了
+// obj.a();	// 2
+// Foo1.a();	// 1
+
+// 对象的key只能是string或者symbol
+// let a = {}, b = '123', c = 123;
+// a[b] = 'b';
+// a[c] = 'c';
+// console.log(a[b])
+
+
+// .的优先级比=高，所以会出现意想不到的答案。
+// let a = { n: 1 }
+// let b = a;
+// a.x = a = { n: 2 }
+// console.log(a, b)
+
+// setState本质是同步的，只不过让react做成了异步的样子，因为要考虑性能，多次state修改，只进行一次DOM渲染。
