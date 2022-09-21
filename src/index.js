@@ -1,4 +1,4 @@
-
+import './demo'
 // 1.对象的深拷贝
 function deepClone(obj) {
   function isObject(o) {
